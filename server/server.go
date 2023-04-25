@@ -2,6 +2,7 @@ package server
 
 import (
 	"github.com/thomasjungblut/go-sstables/memstore"
+	"github.com/thomasjungblut/go-sstables/sstables"
 )
 
 type TabletServer struct {
@@ -9,13 +10,8 @@ type TabletServer struct {
 }
 
 func (server *TabletServer) load(path string) {
-	
-}
 
-import (
-	"github.com/thomasjungblut/go-sstables/memstore"
-	"github.com/thomasjungblut/go-sstables/sstables"
-)
+}
 
 type Server struct {
 	ms   memstore.MemStoreI

@@ -5,7 +5,7 @@ import (
 	"context"
 	"log"
 
-	"go.etcd.io/etcd/client/v3"
+	clientv3 "go.etcd.io/etcd/client/v3"
 )
 
 type Client struct {
@@ -35,7 +35,7 @@ func (client *Client) GetTabletForKey(key string) string {
 	/*
 		find root tablet server, get the user table for key
 		return user table address
-	 */
+	*/
 
 	return ""
 }
