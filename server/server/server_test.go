@@ -1,4 +1,4 @@
-package server
+package main
 
 import (
 	"bigtable/server/proto"
@@ -11,7 +11,7 @@ import (
 )
 
 func TestTabletLoad(t *testing.T) {
-	server := MakeTabletServer()
+	server, _ := MakeTabletServer()
 	context := context.Background()
 	server.Load(context, &proto.LoadRequest{TabletName: "tablet1"})
 	// server.Load("tablet1")
@@ -24,7 +24,7 @@ func TestTabletLoad(t *testing.T) {
 }
 
 func TestTabletGet(t *testing.T) {
-	server := MakeTabletServer()
+	server, _ := MakeTabletServer()
 	context := context.Background()
 	server.Load(context, &proto.LoadRequest{TabletName: "tablet1"})
 	// server.Load("tablet1")

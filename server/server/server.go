@@ -1,31 +1,39 @@
-package server
+package main
 
 import (
 	"context"
 	"fmt"
 	"log"
+	"net"
 	"os"
 
+	"bigtable/config"
+	"bigtable/server"
 	"bigtable/server/proto"
 
 	"github.com/thomasjungblut/go-sstables/memstore"
 	"github.com/thomasjungblut/go-sstables/skiplist"
 	"github.com/thomasjungblut/go-sstables/sstables"
+	clientv3 "go.etcd.io/etcd/client/v3"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 )
 
 type TabletServer struct {
-	tablets map[string]memstore.MemStoreI
+	proto.UnimplementedTabletServiceServer
+	tablets   map[string]memstore.MemStoreI
+	masterCli proto.MasterServiceClient
 }
 
-func (server *TabletServer) Load(
+func (this *TabletServer) Load(
 	ctx context.Context,
 	request *proto.LoadRequest,
 ) (*proto.LoadResponse, error) {
 	tabletName := request.TabletName
 
-	path := GetFullPath(tabletName)
+	path := server.GetFullPath(tabletName)
 	// if is not in the memory, load the sstable
-	_, exist := server.tablets[tabletName]
+	_, exist := this.tablets[tabletName]
 	if exist {
 		return &proto.LoadResponse{}, nil
 	}
@@ -38,7 +46,7 @@ func (server *TabletServer) Load(
 		if err := os.MkdirAll(path, os.ModePerm); err != nil {
 			log.Fatal(err)
 		}
-		server.tablets[tabletName] = memstore.NewMemStore()
+		this.tablets[tabletName] = memstore.NewMemStore()
 		return &proto.LoadResponse{}, nil
 	}
 
@@ -71,14 +79,23 @@ func (server *TabletServer) Load(
 		store.Add(key, value)
 	}
 
-	server.tablets[tabletName] = store
+	this.tablets[tabletName] = store
 	return &proto.LoadResponse{}, nil
 }
 
-func MakeTabletServer() *TabletServer {
-	return &TabletServer{
-		tablets: make(map[string]memstore.MemStoreI),
+func MakeTabletServer() (*TabletServer, error) {
+	var opts []grpc.DialOption
+	opts = append(opts, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	
+	masterConn, err := grpc.Dial(config.MasterServerIp, opts...)
+	if err != nil {
+		return nil, err
 	}
+	masterCli := proto.NewMasterServiceClient(masterConn)
+	return &TabletServer{
+		tablets:   make(map[string]memstore.MemStoreI),
+		masterCli: masterCli,
+	}, nil
 }
 
 // type TabletServerImp struct {
@@ -147,7 +164,11 @@ func (server *TabletServer) Get(
 	request *proto.GetRequest,
 ) (*proto.GetResponse, error) {
 	key := request.GetKey()
-	tabletName := "tablet1"
+	response, err := server.masterCli.GetTabletByKey(ctx, &proto.GetTabletByKeyRequest{Key: key})
+	if err != nil {
+		return &proto.GetResponse{}, err
+	}
+	tabletName := response.GetTabletName()
 	data, err := server.tablets[tabletName].Get([]byte(key))
 	if err != nil {
 		_ = fmt.Errorf("Cannot get value: %v\n", err)
@@ -177,8 +198,12 @@ func (server *TabletServer) Set(
 	key := request.GetKey()
 	value := request.GetValue()
 
-	tabletName := "tablet1"
-	err := server.tablets[tabletName].Add([]byte(key), []byte(value))
+	response, err := server.masterCli.GetTabletByKey(ctx, &proto.GetTabletByKeyRequest{Key: key})
+	if err != nil {
+		return &proto.SetResponse{}, err
+	}
+	tabletName := response.GetTabletName()
+	err = server.tablets[tabletName].Add([]byte(key), []byte(value))
 	if err != nil {
 		_ = fmt.Errorf("Cannot set value: %v", err)
 		return &proto.SetResponse{}, err
@@ -196,9 +221,9 @@ func (server *TabletServer) Set(
 // 	}
 // }
 
-func (server *TabletServer) Flush() {
-	for tabletName, tablet := range server.tablets {
-		path := GetFullPath(tabletName)
+func (this *TabletServer) Flush() {
+	for tabletName, tablet := range this.tablets {
+		path := server.GetFullPath(tabletName)
 		os.RemoveAll(path)
 		if err := os.MkdirAll(path, os.ModePerm); err != nil {
 			log.Fatal(err)
@@ -207,5 +232,51 @@ func (server *TabletServer) Flush() {
 		if err != nil {
 			log.Fatalf("Fatal %v\n", err)
 		}
+	}
+}
+
+func main() {
+	lis, err := net.Listen("tcp", "127.0.0.1:")
+	if err != nil {
+		log.Fatalf("failed to listen: %v", err)
+	}
+
+	etcdCli, err := clientv3.New(clientv3.Config{
+		Endpoints:   config.Endpoints,
+		DialTimeout: config.DialTimeout,
+	})
+
+	if err != nil {
+		log.Fatalf("failed to establish connection with etcd: %v", err)
+	}
+
+	curServersRes, err := etcdCli.Get(context.Background(), "servers")
+
+	if err != nil {
+		log.Fatalf("failed to get servers: %v", err)
+	}
+
+	log.Println(lis.Addr().String())
+
+	var curServers string
+	if len(curServersRes.Kvs) == 0 {
+		curServers = ""
+	} else {
+		curServers = string(curServersRes.Kvs[0].Value)
+	}
+	// 127.0.0.1:1111;127.0.0.1:2222;
+	etcdCli.Put(context.Background(), "servers", curServers+lis.Addr().String()+";")
+
+	s := grpc.NewServer()
+	server, err := MakeTabletServer()
+
+	if err != nil {
+		log.Fatalf("failed to MakeTabletServer: %q", err)
+	}
+
+	proto.RegisterTabletServiceServer(s, server)
+	log.Printf("server listening at %v", lis.Addr())
+	if err := s.Serve(lis); err != nil {
+		log.Fatalf("failed to serve: %v", err)
 	}
 }
