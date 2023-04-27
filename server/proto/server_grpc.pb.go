@@ -177,3 +177,89 @@ var TabletService_ServiceDesc = grpc.ServiceDesc{
 	Streams:  []grpc.StreamDesc{},
 	Metadata: "proto/server.proto",
 }
+
+// MasterServiceClient is the client API for MasterService service.
+//
+// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
+type MasterServiceClient interface {
+	GetTabletByKey(ctx context.Context, in *GetTabletByKeyRequest, opts ...grpc.CallOption) (*GetTabletByKeyResponse, error)
+}
+
+type masterServiceClient struct {
+	cc grpc.ClientConnInterface
+}
+
+func NewMasterServiceClient(cc grpc.ClientConnInterface) MasterServiceClient {
+	return &masterServiceClient{cc}
+}
+
+func (c *masterServiceClient) GetTabletByKey(ctx context.Context, in *GetTabletByKeyRequest, opts ...grpc.CallOption) (*GetTabletByKeyResponse, error) {
+	out := new(GetTabletByKeyResponse)
+	err := c.cc.Invoke(ctx, "/server.MasterService/GetTabletByKey", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// MasterServiceServer is the server API for MasterService service.
+// All implementations must embed UnimplementedMasterServiceServer
+// for forward compatibility
+type MasterServiceServer interface {
+	GetTabletByKey(context.Context, *GetTabletByKeyRequest) (*GetTabletByKeyResponse, error)
+	mustEmbedUnimplementedMasterServiceServer()
+}
+
+// UnimplementedMasterServiceServer must be embedded to have forward compatible implementations.
+type UnimplementedMasterServiceServer struct {
+}
+
+func (UnimplementedMasterServiceServer) GetTabletByKey(context.Context, *GetTabletByKeyRequest) (*GetTabletByKeyResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetTabletByKey not implemented")
+}
+func (UnimplementedMasterServiceServer) mustEmbedUnimplementedMasterServiceServer() {}
+
+// UnsafeMasterServiceServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to MasterServiceServer will
+// result in compilation errors.
+type UnsafeMasterServiceServer interface {
+	mustEmbedUnimplementedMasterServiceServer()
+}
+
+func RegisterMasterServiceServer(s grpc.ServiceRegistrar, srv MasterServiceServer) {
+	s.RegisterService(&MasterService_ServiceDesc, srv)
+}
+
+func _MasterService_GetTabletByKey_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetTabletByKeyRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MasterServiceServer).GetTabletByKey(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/server.MasterService/GetTabletByKey",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MasterServiceServer).GetTabletByKey(ctx, req.(*GetTabletByKeyRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+// MasterService_ServiceDesc is the grpc.ServiceDesc for MasterService service.
+// It's only intended for direct use with grpc.RegisterService,
+// and not to be introspected or modified (even as a copy)
+var MasterService_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "server.MasterService",
+	HandlerType: (*MasterServiceServer)(nil),
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "GetTabletByKey",
+			Handler:    _MasterService_GetTabletByKey_Handler,
+		},
+	},
+	Streams:  []grpc.StreamDesc{},
+	Metadata: "proto/server.proto",
+}
