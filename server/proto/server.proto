@@ -1,0 +1,34 @@
+syntax = "proto3";
+
+package server;
+
+option go_package = "bigtable/server/proto";
+
+service TabletService {
+  // Sends a greeting
+  rpc Load (LoadRequest) returns (LoadResponse) {}
+  rpc Get (GetRequest) returns (GetResponse) {}
+  rpc Set (SetRequest) returns (SetResponse) {}
+}
+
+// The request message containing the user's name.
+message LoadRequest {
+  string tabletName = 1;
+}
+
+message LoadResponse {}
+
+message GetRequest {
+    string key = 1;
+}
+
+message GetResponse {
+    string value = 1;
+}
+
+message SetRequest {
+    string key = 1;
+    string value = 2;
+}
+
+message SetResponse {}

@@ -45,3 +45,7 @@ func (this *MasterServer) watchServers() {
 		}
 	}
 }
+
+func (this *MasterServer) GetTabletByKey(key string) string {
+	return "tablet1"
+}
