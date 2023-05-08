@@ -16,7 +16,9 @@ import (
 	"github.com/thomasjungblut/go-sstables/sstables"
 	clientv3 "go.etcd.io/etcd/client/v3"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/status"
 )
 
 type TabletServer struct {
@@ -86,7 +88,7 @@ func (this *TabletServer) Load(
 func MakeTabletServer() (*TabletServer, error) {
 	var opts []grpc.DialOption
 	opts = append(opts, grpc.WithTransportCredentials(insecure.NewCredentials()))
-	
+
 	masterConn, err := grpc.Dial(config.MasterServerIp, opts...)
 	if err != nil {
 		return nil, err
@@ -97,67 +99,6 @@ func MakeTabletServer() (*TabletServer, error) {
 		masterCli: masterCli,
 	}, nil
 }
-
-// type TabletServerImp struct {
-// 	nodeName string
-// }
-
-// func (server *TabletServer) Load(tabletName string) {
-// 	path := GetFullPath(tabletName)
-// 	// if is not in the memory, load the sstable
-// 	_, exist := server.tablets[tabletName]
-// 	if exist {
-// 		return
-// 	}
-
-// 	// if is not exist in the disk, simply create an empty memtable
-// 	if _, err := os.Stat(path); err == nil {
-// 		fmt.Printf("folder exists\n")
-// 	} else {
-// 		fmt.Printf("folder does not exist\n")
-// 		if err := os.MkdirAll(path, os.ModePerm); err != nil {
-// 			log.Fatal(err)
-// 		}
-// 		server.tablets[tabletName] = memstore.NewMemStore()
-// 		return
-// 	}
-
-// 	reader, err := sstables.NewSSTableReader(
-// 		sstables.ReadBasePath(path),
-// 		sstables.ReadWithKeyComparator(skiplist.BytesComparator),
-// 	)
-
-// 	if err != nil {
-// 		log.Fatalf("error: %v", err)
-// 	}
-// 	defer reader.Close()
-
-// 	metadata := reader.MetaData()
-// 	log.Printf("reading table with %d records, minKey %d and maxKey %d", metadata.NumRecords, metadata.MinKey, metadata.MaxKey)
-
-// 	iter, err := reader.Scan()
-// 	if err != nil {
-// 		log.Fatalf("error: %v\n", err)
-// 	}
-
-// 	numRecords := int(reader.MetaData().NumRecords)
-
-// 	store := memstore.NewMemStore()
-// 	for i := 0; i < numRecords; i++ {
-// 		key, value, err := iter.Next()
-// 		if err != nil {
-// 			break
-// 		}
-// 		store.Add(key, value)
-// 	}
-
-// 	server.tablets[tabletName] = store
-// }
-
-// type Server struct {
-// 	ms   memstore.MemStoreI
-// 	path string
-// }
 
 func (server *TabletServer) Get(
 	ctx context.Context,
@@ -178,19 +119,6 @@ func (server *TabletServer) Get(
 	}, nil
 }
 
-// func (server *TabletServer) Get(key string) string {
-// 	// server.ms.Get()
-
-// 	// First, we need to contact etcd for tablet path by key
-
-// 	tabletName := "tablet1"
-// 	data, err := server.tablets[tabletName].Get([]byte(key))
-// 	if err != nil {
-// 		_ = fmt.Errorf("Cannot get value: %v\n", err)
-// 	}
-// 	return string(data)
-// }
-
 func (server *TabletServer) Set(
 	ctx context.Context,
 	request *proto.SetRequest,
@@ -203,7 +131,15 @@ func (server *TabletServer) Set(
 		return &proto.SetResponse{}, err
 	}
 	tabletName := response.GetTabletName()
-	err = server.tablets[tabletName].Add([]byte(key), []byte(value))
+
+	tablet, exist := server.tablets[tabletName]
+	if !exist {
+		return &proto.SetResponse{}, status.Errorf(codes.NotFound, "TABLET_NOT_FOUND")
+	}
+
+	// if tablet.Size()
+
+	err = tablet.Add([]byte(key), []byte(value))
 	if err != nil {
 		_ = fmt.Errorf("Cannot set value: %v", err)
 		return &proto.SetResponse{}, err
@@ -211,15 +147,6 @@ func (server *TabletServer) Set(
 
 	return &proto.SetResponse{}, nil
 }
-
-// func (server *TabletServer) Set(key string, value string) {
-// 	// server.ms.Add()
-// 	tabletName := "tablet1"
-// 	err := server.tablets[tabletName].Add([]byte(key), []byte(value))
-// 	if err != nil {
-// 		_ = fmt.Errorf("Cannot set value: %v", err)
-// 	}
-// }
 
 func (this *TabletServer) Flush() {
 	for tabletName, tablet := range this.tablets {

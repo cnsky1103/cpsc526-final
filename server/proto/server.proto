@@ -11,7 +11,7 @@ service TabletService {
   rpc Set (SetRequest) returns (SetResponse) {}
 }
 
-service MasterService {
+service MasterService { 
   rpc GetTabletByKey (GetTabletByKeyRequest) returns (GetTabletByKeyResponse) {}
 }
 
@@ -21,6 +21,7 @@ message GetTabletByKeyRequest {
 
 message GetTabletByKeyResponse {
   string tabletName = 1;
+  string serverIp = 2;
 }
 
 // The request message containing the user's name.
