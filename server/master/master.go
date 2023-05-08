@@ -30,7 +30,12 @@ type MasterServer struct {
 }
 
 func MakeMasterServer() (*MasterServer, error) {
-	server := &MasterServer{}
+	server := &MasterServer{
+		servers:      make([]string, 0),
+		server_conns: make(map[string]proto.TabletServiceClient),
+		tablets:      make([]string, 0),
+		assignments:  make(map[string]string),
+	}
 
 	cli, err := clientv3.New(clientv3.Config{
 		Endpoints:   config.Endpoints,
@@ -54,21 +59,21 @@ func (this *MasterServer) watchServers() {
 		for _, ev := range wresp.Events {
 			log.Printf("%s %q : %q\n", ev.Type, ev.Kv.Key, ev.Kv.Value)
 			this.servers = strings.Split(string(ev.Kv.Value), ";")
-		}
-	}
 
-	var opts []grpc.DialOption
-	opts = append(opts, grpc.WithTransportCredentials(insecure.NewCredentials()))
+			var opts []grpc.DialOption
+			opts = append(opts, grpc.WithTransportCredentials(insecure.NewCredentials()))
 
-	// Establish Connection
-	for _, serverIp := range this.servers {
-		if _, exist := this.server_conns[serverIp]; !exist {
-			conn, err := grpc.Dial(serverIp, opts...)
-			if err != nil {
-				log.Printf("Err %v\n", err)
-			} else {
-				log.Printf("Established connection to %v\n", serverIp)
-				this.server_conns[serverIp] = proto.NewTabletServiceClient(conn)
+			// Establish Connection
+			for _, serverIp := range this.servers {
+				if _, exist := this.server_conns[serverIp]; !exist {
+					conn, err := grpc.Dial(serverIp, opts...)
+					if err != nil {
+						log.Printf("Err %v\n", err)
+					} else {
+						log.Printf("Established connection to %v\n", serverIp)
+						this.server_conns[serverIp] = proto.NewTabletServiceClient(conn)
+					}
+				}
 			}
 		}
 	}
