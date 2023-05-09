@@ -9,6 +9,7 @@ service TabletService {
   rpc Load (LoadRequest) returns (LoadResponse) {}
   rpc Get (GetRequest) returns (GetResponse) {}
   rpc Set (SetRequest) returns (SetResponse) {}
+  rpc Ping (PingRequest) returns (PingResponse) {}
 }
 
 service MasterService { 
@@ -45,3 +46,8 @@ message SetRequest {
 }
 
 message SetResponse {}
+
+message PingRequest {}
+message PingResponse {
+  bool isAlive = 1;
+}

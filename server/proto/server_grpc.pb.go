@@ -26,6 +26,7 @@ type TabletServiceClient interface {
 	Load(ctx context.Context, in *LoadRequest, opts ...grpc.CallOption) (*LoadResponse, error)
 	Get(ctx context.Context, in *GetRequest, opts ...grpc.CallOption) (*GetResponse, error)
 	Set(ctx context.Context, in *SetRequest, opts ...grpc.CallOption) (*SetResponse, error)
+	Ping(ctx context.Context, in *PingRequest, opts ...grpc.CallOption) (*PingResponse, error)
 }
 
 type tabletServiceClient struct {
@@ -63,6 +64,15 @@ func (c *tabletServiceClient) Set(ctx context.Context, in *SetRequest, opts ...g
 	return out, nil
 }
 
+func (c *tabletServiceClient) Ping(ctx context.Context, in *PingRequest, opts ...grpc.CallOption) (*PingResponse, error) {
+	out := new(PingResponse)
+	err := c.cc.Invoke(ctx, "/server.TabletService/Ping", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // TabletServiceServer is the server API for TabletService service.
 // All implementations must embed UnimplementedTabletServiceServer
 // for forward compatibility
@@ -71,6 +81,7 @@ type TabletServiceServer interface {
 	Load(context.Context, *LoadRequest) (*LoadResponse, error)
 	Get(context.Context, *GetRequest) (*GetResponse, error)
 	Set(context.Context, *SetRequest) (*SetResponse, error)
+	Ping(context.Context, *PingRequest) (*PingResponse, error)
 	mustEmbedUnimplementedTabletServiceServer()
 }
 
@@ -86,6 +97,9 @@ func (UnimplementedTabletServiceServer) Get(context.Context, *GetRequest) (*GetR
 }
 func (UnimplementedTabletServiceServer) Set(context.Context, *SetRequest) (*SetResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Set not implemented")
+}
+func (UnimplementedTabletServiceServer) Ping(context.Context, *PingRequest) (*PingResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Ping not implemented")
 }
 func (UnimplementedTabletServiceServer) mustEmbedUnimplementedTabletServiceServer() {}
 
@@ -154,6 +168,24 @@ func _TabletService_Set_Handler(srv interface{}, ctx context.Context, dec func(i
 	return interceptor(ctx, in, info, handler)
 }
 
+func _TabletService_Ping_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(PingRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TabletServiceServer).Ping(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/server.TabletService/Ping",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TabletServiceServer).Ping(ctx, req.(*PingRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // TabletService_ServiceDesc is the grpc.ServiceDesc for TabletService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -172,6 +204,10 @@ var TabletService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Set",
 			Handler:    _TabletService_Set_Handler,
+		},
+		{
+			MethodName: "Ping",
+			Handler:    _TabletService_Ping_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
