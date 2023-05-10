@@ -148,6 +148,16 @@ func (server *TabletServer) Set(
 	return &proto.SetResponse{}, nil
 }
 
+func (server *TabletServer) Ping(
+	ctx context.Context,
+	request *proto.PingRequest,
+) (*proto.PingResponse, error) {
+	// A dummy implementation.
+	return &proto.PingResponse{
+		IsAlive: true,
+	}, nil
+}
+
 func (this *TabletServer) Flush() {
 	for tabletName, tablet := range this.tablets {
 		path := server.GetFullPath(tabletName)

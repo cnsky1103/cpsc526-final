@@ -2,6 +2,7 @@ package client
 
 import (
 	"bigtable/config"
+	"bigtable/server/proto"
 	"context"
 	"log"
 
@@ -9,7 +10,8 @@ import (
 )
 
 type Client struct {
-	etcdCli *clientv3.Client
+	etcdCli     *clientv3.Client
+	master_conn proto.MasterServiceClient
 }
 
 func NewClient() *Client {
@@ -26,7 +28,7 @@ func NewClient() *Client {
 }
 
 func (client *Client) GetTabletForKey(key string) string {
-	root_tablet, err := client.etcdCli.Get(context.TODO(), "root_tablet")
+	root_tablet, err := client.etcdCli.Get(context.Background(), "root_tablet")
 
 	if err != nil {
 
@@ -41,6 +43,14 @@ func (client *Client) GetTabletForKey(key string) string {
 }
 
 func (client *Client) Get(key string) string {
+	tablet_path := client.GetTabletForKey(key)
+	/*
+		call server.Get()
+	*/
+	return ""
+}
+
+func (client *Client) Put(key string, val string) string {
 	tablet_path := client.GetTabletForKey(key)
 	/*
 		call server.Get()
