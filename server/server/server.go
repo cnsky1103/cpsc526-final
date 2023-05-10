@@ -139,7 +139,8 @@ func (server *TabletServer) Set(
 
 	// if tablet.Size()
 
-	err = tablet.Add([]byte(key), []byte(value))
+	err = tablet.Upsert([]byte(key), []byte(value))
+
 	if err != nil {
 		_ = fmt.Errorf("Cannot set value: %v", err)
 		return &proto.SetResponse{}, err
@@ -173,7 +174,7 @@ func (this *TabletServer) Flush() {
 }
 
 func main() {
-	lis, err := net.Listen("tcp", "127.0.0.1:")
+	lis, err := net.Listen("tcp", "0.0.0.0:")
 	if err != nil {
 		log.Fatalf("failed to listen: %v", err)
 	}

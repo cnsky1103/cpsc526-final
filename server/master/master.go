@@ -16,9 +16,7 @@ import (
 
 	clientv3 "go.etcd.io/etcd/client/v3"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials/insecure"
-	"google.golang.org/grpc/status"
 )
 
 type MasterServer struct {
@@ -160,6 +158,7 @@ func (this *MasterServer) GetTabletByKey(ctx context.Context, req *proto.GetTabl
 		server_to_load := this.servers[index]
 		err := this.RequestTabletServerLoading(server_to_load, name)
 		if err != nil {
+			log.Printf("Failed to RequestTabletServerLoading: %v\n", err)
 			return &proto.GetTabletByKeyResponse{}, err
 		}
 		this.assignments[name] = server_to_load
@@ -168,9 +167,9 @@ func (this *MasterServer) GetTabletByKey(ctx context.Context, req *proto.GetTabl
 		ip = server_to_load
 	}
 
-	if !exist {
-		return &proto.GetTabletByKeyResponse{}, status.Errorf(codes.NotFound, "SERVER_NOT_AVAILABLE")
-	}
+	// if !exist {
+	// 	return &proto.GetTabletByKeyResponse{}, status.Errorf(codes.NotFound, "SERVER_NOT_AVAILABLE")
+	// }
 
 	return &proto.GetTabletByKeyResponse{
 		TabletName: name,
