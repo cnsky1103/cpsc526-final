@@ -20,4 +20,12 @@ Several scripts are provided inside folder `scripts/`. To run the demo client, y
 
 > If the test is run through the script mentioned above, both master and server log will be written to `server/master/master_run.log` and `server/server/server_run.log` respectively.
 
+## Group Work
 
+### Yibo Yan
+
+He works on the tablet server implementation and GRPC setup. Finalized client implementation and basic test cases for master, server and client. Put some scripts together for easier running and testing.
+
+### Kaiyuan Sun
+
+He works on the initial set up for the master and API design. Worked on the coordination between master and tablet server. Worked on using etcd to mimic chubby implementation.
