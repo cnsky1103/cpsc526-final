@@ -45,9 +45,6 @@ func (this *TabletServer) Load(
 		fmt.Printf("folder exists\n")
 	} else {
 		fmt.Printf("folder does not exist\n")
-		if err := os.MkdirAll(path, os.ModePerm); err != nil {
-			log.Fatal(err)
-		}
 		this.tablets[tabletName] = memstore.NewMemStore()
 		return &proto.LoadResponse{}, nil
 	}
@@ -111,9 +108,14 @@ func (server *TabletServer) Get(
 	}
 	tabletName := response.GetTabletName()
 	data, err := server.tablets[tabletName].Get([]byte(key))
+
 	if err != nil {
-		_ = fmt.Errorf("Cannot get value: %v\n", err)
+		log.Printf("Cannot get value: %v\n", err)
+		return &proto.GetResponse{
+			Value: "",
+		}, err
 	}
+
 	return &proto.GetResponse{
 		Value: string(data),
 	}, nil
@@ -142,9 +144,15 @@ func (server *TabletServer) Set(
 	err = tablet.Upsert([]byte(key), []byte(value))
 
 	if err != nil {
-		_ = fmt.Errorf("Cannot set value: %v", err)
+		log.Printf("Cannot set value: %v\n", err)
 		return &proto.SetResponse{}, err
 	}
+
+	// if tablet.Size() > config.TabletFlushMaxSize {
+	// 	for content := range tablet.SStableIterator() {
+
+	// 	}
+	// }
 
 	return &proto.SetResponse{}, nil
 }
@@ -159,16 +167,26 @@ func (server *TabletServer) Ping(
 	}, nil
 }
 
+func (this *TabletServer) FlushTablet(tablet memstore.MemStoreI, tabletName string) error {
+	path := server.GetFullPath(tabletName)
+	os.RemoveAll(path)
+	if err := os.MkdirAll(path, os.ModePerm); err != nil {
+		log.Println(err)
+		return err
+	}
+	err := tablet.Flush(sstables.WriteBasePath(path))
+	if err != nil {
+		log.Printf("Fatal error during flush %v\n", err)
+		return err
+	}
+	return nil
+}
+
 func (this *TabletServer) Flush() {
 	for tabletName, tablet := range this.tablets {
-		path := server.GetFullPath(tabletName)
-		os.RemoveAll(path)
-		if err := os.MkdirAll(path, os.ModePerm); err != nil {
-			log.Fatal(err)
-		}
-		err := tablet.Flush(sstables.WriteBasePath(path))
+		err := this.FlushTablet(tablet, tabletName)
 		if err != nil {
-			log.Fatalf("Fatal %v\n", err)
+			log.Fatalf("Failed to flush tablet: %v, name: %v.\n", tablet, tabletName)
 		}
 	}
 }

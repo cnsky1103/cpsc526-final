@@ -6,6 +6,7 @@ import (
 	"log"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/thomasjungblut/go-sstables/memstore"
 	"github.com/thomasjungblut/go-sstables/sstables"
 )
@@ -21,6 +22,17 @@ func TestTabletLoad(t *testing.T) {
 	})
 	// server.Set("Hello", "World")
 	server.Flush()
+}
+
+func TestTabletEmptyGet(t *testing.T) {
+	server, _ := MakeTabletServer()
+	context := context.Background()
+	server.Load(context, &proto.LoadRequest{TabletName: "tablet1"})
+	_, err := server.Get(context, &proto.GetRequest{
+		Key: "NONEXIST",
+	})
+	// log.Println(err)
+	assert.NotNil(t, err)
 }
 
 func TestTabletGet(t *testing.T) {

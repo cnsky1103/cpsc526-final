@@ -14,6 +14,7 @@ service TabletService {
 
 service MasterService { 
   rpc GetTabletByKey (GetTabletByKeyRequest) returns (GetTabletByKeyResponse) {}
+  // rpc ReadjustTabletAssignment (ReadjustTabletAssignmentRequest) returns (ReadjustTabletAssignmentResponse) {}
 }
 
 message GetTabletByKeyRequest {
@@ -51,3 +52,7 @@ message PingRequest {}
 message PingResponse {
   bool isAlive = 1;
 }
+
+// message ReadjustTabletAssignmentRequest {
+
+// }
