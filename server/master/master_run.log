@@ -1,0 +1,11 @@
+2023/05/10 05:15:41 PUT "servers" : ""
+2023/05/10 05:15:41 Servers: []
+2023/05/10 05:15:41 [master] server listening at [::]:1919
+2023/05/10 05:15:43 PUT "servers" : "[::]:38689;"
+2023/05/10 05:15:43 Servers: [[::]:38689]
+2023/05/10 05:15:43 Established connection to [::]:38689
+2023/05/10 05:15:45 signal received
+2023/05/10 05:15:45 Start to clean up...
+2023/05/10 05:15:45 PUT "servers" : ""
+2023/05/10 05:15:45 Servers: []
+exit status 1

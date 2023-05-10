@@ -59,7 +59,14 @@ func (this *MasterServer) watchServers() {
 	for wresp := range rch {
 		for _, ev := range wresp.Events {
 			log.Printf("%s %q : %q\n", ev.Type, ev.Kv.Key, ev.Kv.Value)
-			this.servers = strings.Split(string(ev.Kv.Value), ";")
+			splited := strings.Split(string(ev.Kv.Value), ";")
+			filtered := make([]string, 0)
+			for _, serverIp := range splited {
+				if len(serverIp) != 0 {
+					filtered = append(filtered, serverIp)
+				}
+			}
+			this.servers = filtered
 
 			var opts []grpc.DialOption
 			opts = append(opts, grpc.WithTransportCredentials(insecure.NewCredentials()))
@@ -67,6 +74,10 @@ func (this *MasterServer) watchServers() {
 			// Establish Connection
 			log.Printf("Servers: %v\n", this.servers)
 			for _, serverIp := range this.servers {
+				if len(serverIp) == 0 {
+					log.Println("Empty server ip")
+					continue
+				}
 				if _, exist := this.server_conns[serverIp]; !exist {
 					conn, err := grpc.Dial(serverIp, opts...)
 					if err != nil {
